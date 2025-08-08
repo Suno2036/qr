@@ -8,6 +8,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;700&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- JSZip для создания архива -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -71,6 +73,35 @@
         #photo-viewer-modal {
             background-color: rgba(0, 0, 0, 0.9);
             z-index: 70;
+        }
+        /* Кастомный стиль для ползунка зума */
+        #zoom-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #fff;
+            border: 2px solid #fff;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 5px rgba(0,0,0,0.5);
+            transition: background-color 0.2s, box-shadow 0.2s;
+        }
+        #zoom-slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: #fff;
+            border: 2px solid #fff;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 5px rgba(0,0,0,0.5);
+            transition: background-color 0.2s, box-shadow 0.2s;
+        }
+        #zoom-slider:hover::-webkit-slider-thumb {
+            background: #f1f1f1;
+        }
+        #zoom-slider:hover::-moz-range-thumb {
+            background: #f1f1f1;
         }
     </style>
 </head>
@@ -137,9 +168,19 @@
             </div>
         </div>
         
-        <!-- Галерея сделанных фото -->
-        <div id="gallery-container" class="fixed top-4 left-4 flex flex-wrap gap-2">
-            <!-- Сюда будут добавляться миниатюры фото -->
+        <!-- Ползунок зума -->
+        <div id="zoom-controls" class="absolute left-1/2 bottom-20 transform -translate-x-1/2 w-3/4 max-w-sm hidden">
+            <input type="range" id="zoom-slider" min="1" max="1" value="1" step="0.1" class="w-full h-2 bg-white/30 rounded-lg appearance-none cursor-pointer backdrop-blur-sm">
+        </div>
+
+        <!-- Галерея сделанных фото и кнопка скачать -->
+        <div class="fixed top-4 left-4 flex flex-col items-start gap-2">
+            <div id="gallery-container" class="flex flex-wrap gap-2">
+                <!-- Сюда будут добавляться миниатюры фото -->
+            </div>
+            <button id="download-all-btn" class="mt-2 text-white bg-white/30 backdrop-blur-sm px-4 py-2 rounded-full font-bold text-sm hidden hover:bg-white/50 transition">
+                Скачать все фото
+            </button>
         </div>
 
         <!-- Скрытый canvas для захвата изображения -->
@@ -205,12 +246,23 @@
             const photoViewerModal = document.getElementById('photo-viewer-modal');
             const fullSizePhoto = document.getElementById('full-size-photo');
             const closePhotoViewerBtn = document.getElementById('close-photo-viewer');
+            
+            const zoomControls = document.getElementById('zoom-controls');
+            const zoomSlider = document.getElementById('zoom-slider');
+            const downloadAllBtn = document.getElementById('download-all-btn');
 
             // --- Настройки ---
             const PHOTO_LIMIT = 25;
             let currentStream;
             let currentFacingMode = 'environment'; // 'environment' - задняя камера, 'user' - передняя
             let userName = '';
+            
+            let supportsZoom = false;
+            let currentZoom = 1.0;
+            let minZoom = 1.0;
+            let maxZoom = 1.0;
+
+            let initialPinchDistance = null;
 
             // Сообщения для всплывающего уведомления
             const messages = [
@@ -288,6 +340,9 @@
                 closePhotoViewerBtn.addEventListener('click', () => {
                     photoViewerModal.classList.add('hidden');
                 });
+
+                // Обработчик для кнопки "Скачать все"
+                downloadAllBtn.addEventListener('click', downloadAllPhotos);
             }
 
             // Основной поток приложения после ввода имени
@@ -330,6 +385,7 @@
                 cameraScreen.classList.remove('hidden');
                 cameraScreen.classList.add('fade-in');
                 checkCameraSwitchAvailability();
+                setupZoomControls();
             }
             
             // Вспомогательная функция для получения потока с камеры
@@ -385,6 +441,75 @@
                 currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
                 console.log(`Переключение камеры на: ${currentFacingMode}`);
                 startCamera();
+            }
+
+            // Настройка управления зумом
+            function setupZoomControls() {
+                const videoTrack = currentStream.getVideoTracks()[0];
+                const capabilities = videoTrack.getCapabilities();
+                
+                if (capabilities.zoom) {
+                    supportsZoom = true;
+                    minZoom = capabilities.zoom.min;
+                    maxZoom = capabilities.zoom.max;
+                    currentZoom = capabilities.zoom.current;
+
+                    zoomSlider.min = minZoom;
+                    zoomSlider.max = maxZoom;
+                    zoomSlider.step = capabilities.zoom.step || 0.1;
+                    zoomSlider.value = currentZoom;
+                    zoomControls.classList.remove('hidden');
+
+                    zoomSlider.addEventListener('input', (e) => {
+                        applyZoom(parseFloat(e.target.value));
+                    });
+
+                    // Обработчики для pinch-to-zoom на мобильных
+                    videoElement.addEventListener('touchstart', handleTouchStart, false);
+                    videoElement.addEventListener('touchmove', handleTouchMove, false);
+                } else {
+                    supportsZoom = false;
+                    zoomControls.classList.add('hidden');
+                }
+            }
+
+            // Функция для применения зума
+            function applyZoom(zoomValue) {
+                if (supportsZoom) {
+                    currentZoom = Math.max(minZoom, Math.min(maxZoom, zoomValue));
+                    const videoTrack = currentStream.getVideoTracks()[0];
+                    videoTrack.applyConstraints({ advanced: [{ zoom: currentZoom }] })
+                        .catch(e => console.error("Не удалось применить зум", e));
+                    zoomSlider.value = currentZoom; // Обновляем ползунок, если зум меняется от жеста
+                }
+            }
+
+            // Обработчик начала касания для pinch-to-zoom
+            function handleTouchStart(event) {
+                if (event.touches.length === 2) {
+                    initialPinchDistance = getPinchDistance(event.touches);
+                } else {
+                    initialPinchDistance = null;
+                }
+            }
+
+            // Обработчик движения пальцев для pinch-to-zoom
+            function handleTouchMove(event) {
+                if (event.touches.length === 2 && initialPinchDistance !== null) {
+                    const newPinchDistance = getPinchDistance(event.touches);
+                    const zoomChange = newPinchDistance / initialPinchDistance;
+                    const newZoom = currentZoom * zoomChange;
+                    
+                    applyZoom(newZoom);
+                    initialPinchDistance = newPinchDistance;
+                }
+            }
+
+            // Вспомогательная функция для расчета расстояния между пальцами
+            function getPinchDistance(touches) {
+                const dx = touches[0].clientX - touches[1].clientX;
+                const dy = touches[0].clientY - touches[1].clientY;
+                return Math.sqrt(dx * dx + dy * dy);
             }
 
             // Функция "Сделать фото"
@@ -465,6 +590,7 @@
                     photoViewerModal.classList.remove('hidden');
                 });
                 galleryContainer.appendChild(img);
+                downloadAllBtn.classList.remove('hidden');
             }
 
             // Сохранение фото в localStorage
@@ -478,6 +604,51 @@
             function loadPhotosFromStorage() {
                 const photos = JSON.parse(localStorage.getItem('weddingPhotos') || '[]');
                 photos.forEach(displayPhotoInGallery);
+                if (photos.length > 0) {
+                    downloadAllBtn.classList.remove('hidden');
+                }
+            }
+
+            // Функция для скачивания всех фото разом
+            async function downloadAllPhotos() {
+                const photos = JSON.parse(localStorage.getItem('weddingPhotos') || '[]');
+                if (photos.length === 0) {
+                    messageBoxText.textContent = "Нет фотографий для скачивания.";
+                    messageBox.classList.remove('hidden');
+                    return;
+                }
+
+                // Показываем сообщение о подготовке
+                messageBoxText.textContent = "Подготовка фотографий к скачиванию...";
+                messageBox.classList.remove('hidden');
+                downloadAllBtn.disabled = true;
+
+                try {
+                    const zip = new JSZip();
+                    
+                    for (let i = 0; i < photos.length; i++) {
+                        const imageDataUrl = photos[i];
+                        const base64Data = imageDataUrl.split(',')[1];
+                        zip.file(`photo_${i + 1}.jpeg`, base64Data, { base64: true });
+                    }
+
+                    const content = await zip.generateAsync({ type: "blob" });
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(content);
+                    a.download = 'svadebnye_fotografii.zip';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+
+                    // Скрываем сообщение после скачивания
+                    messageBox.classList.add('hidden');
+                } catch(e) {
+                    messageBoxText.textContent = "Произошла ошибка при создании архива.";
+                    messageBox.classList.remove('hidden');
+                    console.error("Ошибка при скачивании архива:", e);
+                } finally {
+                    downloadAllBtn.disabled = false;
+                }
             }
 
             // Запускаем приложение
@@ -486,3 +657,4 @@
     </script>
 </body>
 </html>
+
