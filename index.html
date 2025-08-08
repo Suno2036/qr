@@ -3,20 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Свадебная фотобудка</title>
+    <title>Свадебная фотобудка Ильи и Алины</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;700&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            touch-action: manipulation; /* Предотвращает масштабирование по двойному тапу на мобильных устройствах */
+            touch-action: manipulation;
         }
-        .font-serif-display {
-            font-family: 'Playfair Display', serif;
+        .font-wedding-title {
+            font-family: 'Dancing Script', cursive;
         }
-        /* Стили для плавного появления элементов */
         .fade-in {
             animation: fadeIn 0.5s ease-in-out;
         }
@@ -24,7 +23,6 @@
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        /* Стилизация камеры для заполнения экрана */
         #camera-view {
             width: 100%;
             height: 100%;
@@ -49,19 +47,66 @@
             justify-content: center;
             align-items: center;
         }
+        /* Анимация для всплывающего окна */
+        @keyframes modal-scale-in {
+            from { transform: scale(0.7); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .modal-content {
+            animation: modal-scale-in 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        /* Стиль для всплывающего уведомления */
+        #notification-popup {
+            position: fixed;
+            top: -100px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 60;
+            transition: top 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+        }
+        #notification-popup.show {
+            top: 20px;
+        }
+        /* Стиль для модального окна просмотра фото */
+        #photo-viewer-modal {
+            background-color: rgba(0, 0, 0, 0.9);
+            z-index: 70;
+        }
     </style>
 </head>
-<body class="bg-gray-100 text-gray-800">
+<body class="bg-rose-50 text-gray-800">
+
+    <!-- Модальное окно для ввода имени -->
+    <div id="name-input-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div class="modal-content bg-white p-8 rounded-xl shadow-2xl text-center max-w-sm w-full">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">Как к вам обращаться?</h2>
+            <p class="text-sm text-gray-600 mb-6">Ваше имя будет добавлено на каждую фотографию.</p>
+            <input type="text" id="user-name-input" placeholder="Введите ваше имя" class="w-full p-3 rounded-lg border-2 border-gray-300 focus:outline-none focus:border-rose-500 transition mb-4">
+            <button id="submit-name-btn" class="w-full bg-rose-500 text-white font-bold py-3 px-8 rounded-full shadow-lg hover:bg-rose-600 transition-all transform hover:scale-105 active:scale-95">
+                Продолжить
+            </button>
+            <p id="name-error-message" class="mt-4 text-red-500 font-medium hidden"></p>
+        </div>
+    </div>
 
     <!-- Начальный экран -->
-    <div id="welcome-screen" class="min-h-screen flex flex-col items-center justify-center text-center p-6 fade-in">
-        <h1 class="font-serif-display text-4xl md:text-5xl text-gray-900">Поздравляем!</h1>
-        <p class="mt-4 text-lg text-gray-600">Поделитесь лучшими моментами этого дня!</p>
-        <p class="mt-2 text-sm text-gray-500">Вы можете сделать до 25 фотографий.</p>
-        <button id="start-camera-btn" class="mt-8 bg-rose-500 text-white font-bold py-3 px-8 rounded-full shadow-lg hover:bg-rose-600 transition-transform transform hover:scale-105">
-            Открыть камеру
-        </button>
-        <p id="error-message" class="mt-4 text-red-500 font-medium hidden max-w-md"></p>
+    <div id="welcome-screen" class="min-h-screen flex flex-col items-center justify-center text-center p-6 fade-in bg-rose-50 hidden">
+        <div class="p-8 md:p-12 rounded-3xl bg-white shadow-xl max-w-lg w-full transform transition-transform hover:scale-105">
+            <h1 class="font-wedding-title text-5xl md:text-6xl text-rose-500">
+                Илья & Алина
+            </h1>
+            <p class="mt-4 text-xl md:text-2xl font-medium text-gray-700">
+                28.08.2025
+            </p>
+            <p class="mt-2 text-lg text-gray-600">
+                Поделитесь лучшими моментами этого дня!
+            </p>
+            <p class="mt-4 text-sm text-gray-500">Вы можете сделать до 25 фотографий.</p>
+            <button id="start-camera-btn" class="mt-8 bg-rose-500 text-white font-bold py-3 px-8 rounded-full shadow-lg hover:bg-rose-600 transition-all transform hover:scale-105 active:scale-95">
+                Открыть камеру
+            </button>
+            <p id="error-message" class="mt-4 text-red-500 font-medium hidden max-w-md"></p>
+        </div>
     </div>
 
     <!-- Экран с камерой -->
@@ -73,15 +118,20 @@
         <!-- Элементы управления камерой -->
         <div class="camera-controls">
             <!-- Кнопка переключения камеры -->
-            <button id="switch-camera-btn" class="absolute left-4 bottom-8 text-white bg-black bg-opacity-30 p-3 rounded-full hover:bg-opacity-50 transition hidden">
+            <button id="switch-camera-btn" class="absolute left-4 bottom-8 text-white bg-white/30 backdrop-blur-sm p-3 rounded-full hover:bg-white/50 transition hidden">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 19H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5"/><path d="M13 5h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-5"/><path d="m20 12-3-3-3 3"/><path d="m4 12 3 3 3-3"/></svg>
             </button>
 
-            <!-- Кнопка "Сделать фото" -->
-            <button id="take-photo-btn" class="w-20 h-20 bg-white rounded-full border-4 border-white ring-2 ring-offset-2 ring-offset-black/50 ring-rose-500 shadow-xl transition-transform transform active:scale-90"></button>
+            <!-- Кнопка "Сделать фото" с изображением -->
+            <button id="take-photo-btn" class="w-20 h-20 rounded-full transition-transform transform active:scale-90 flex items-center justify-center p-2 bg-transparent">
+                <img src="https://raw.githubusercontent.com/Suno2036/qr/main/White%20and%20Black%20Simple%20Initial%20Wedding%20Logo.png" 
+                     alt="Сделать фото" 
+                     class="w-full h-full object-contain"
+                     onerror="this.onerror=null;this.src='https://placehold.co/100x100/ffffff/000000?text=Logo'">
+            </button>
             
             <!-- Счетчик оставшихся фото -->
-            <div class="absolute right-4 bottom-9 text-white bg-black bg-opacity-30 px-3 py-1 rounded-full text-center">
+            <div class="absolute right-4 bottom-9 text-white bg-white/30 backdrop-blur-sm px-3 py-1 rounded-full text-center">
                 <span id="photo-counter" class="font-bold text-lg">25</span>
                 <span class="text-xs block">фото</span>
             </div>
@@ -96,13 +146,45 @@
         <canvas id="photo-canvas" class="hidden"></canvas>
     </div>
 
+    <!-- Кастомное всплывающее окно для сообщений -->
+    <div id="message-box" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
+        <div class="modal-content bg-white p-6 rounded-xl shadow-2xl text-center max-w-sm w-full">
+            <p id="message-box-text" class="text-lg font-semibold text-gray-800"></p>
+            <button id="message-box-close" class="mt-4 px-6 py-2 bg-rose-500 text-white rounded-full hover:bg-rose-600 transition-colors">OK</button>
+        </div>
+    </div>
+
+    <!-- Всплывающее уведомление от молодоженов -->
+    <div id="notification-popup" class="w-full max-w-sm bg-white rounded-xl shadow-lg p-3 flex items-center gap-3">
+        <img id="notification-image" src="https://raw.githubusercontent.com/Suno2036/qr/main/a19abaa4-3c2f-46c8-9263-af6d4d80be2e.jpeg" 
+             class="w-12 h-12 object-cover rounded-full border-2 border-white shadow-sm"
+             alt="Илья и Алина">
+        <div class="flex-1">
+            <p class="font-bold text-sm text-gray-900">Илья и Алина</p>
+            <p id="notification-message" class="text-sm text-gray-600 mt-1"></p>
+        </div>
+    </div>
+
+    <!-- Аудио элемент для звука уведомления -->
+    <audio id="notification-sound" src="https://raw.githubusercontent.com/Suno2036/qr/main/notification-sound-for-messenger-messages.mp3" preload="auto"></audio>
+
+    <!-- Модальное окно для просмотра фотографий -->
+    <div id="photo-viewer-modal" class="fixed inset-0 flex items-center justify-center p-4 hidden">
+        <button id="close-photo-viewer" class="absolute top-4 right-4 text-white text-4xl">&times;</button>
+        <img id="full-size-photo" src="" alt="Full size photo" class="max-w-full max-h-full object-contain">
+    </div>
+
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // --- Элементы интерфейса ---
+            const nameInputModal = document.getElementById('name-input-modal');
+            const userNameInput = document.getElementById('user-name-input');
+            const submitNameBtn = document.getElementById('submit-name-btn');
+            const nameErrorMessage = document.getElementById('name-error-message');
+
             const welcomeScreen = document.getElementById('welcome-screen');
             const cameraScreen = document.getElementById('camera-screen');
             const startCameraBtn = document.getElementById('start-camera-btn');
-            const errorMessage = document.getElementById('error-message');
             
             const videoElement = document.getElementById('camera-view');
             const takePhotoBtn = document.getElementById('take-photo-btn');
@@ -112,10 +194,53 @@
             const canvas = document.getElementById('photo-canvas');
             const context = canvas.getContext('2d');
 
+            const messageBox = document.getElementById('message-box');
+            const messageBoxText = document.getElementById('message-box-text');
+            const messageBoxCloseBtn = document.getElementById('message-box-close');
+            
+            const notificationPopup = document.getElementById('notification-popup');
+            const notificationMessageEl = document.getElementById('notification-message');
+            const notificationSound = document.getElementById('notification-sound');
+
+            const photoViewerModal = document.getElementById('photo-viewer-modal');
+            const fullSizePhoto = document.getElementById('full-size-photo');
+            const closePhotoViewerBtn = document.getElementById('close-photo-viewer');
+
             // --- Настройки ---
             const PHOTO_LIMIT = 25;
             let currentStream;
             let currentFacingMode = 'environment'; // 'environment' - задняя камера, 'user' - передняя
+            let userName = '';
+
+            // Сообщения для всплывающего уведомления
+            const messages = [
+                'Спасибо, что разделили с нами этот счастливый день!',
+                'Вы самый желанный гость! Рады видеть вас!',
+                'Мы очень ценим ваше присутствие.',
+                'Ваша улыбка делает наш день ярче!',
+                'Спасибо за все, что вы для нас значите.',
+                'Каждый момент сегодня бесценен, спасибо вам!',
+                'Мы очень рады, что вы здесь.',
+                'Это лучший день в нашей жизни, благодаря вам!',
+                'Спасибо за тепло и радость, которую вы принесли.',
+                'Ваш приход - это самый лучший подарок.',
+                'Мы так счастливы, что вы с нами.',
+                'Пусть этот день останется в памяти навсегда.',
+                'Ваше присутствие - это счастье!',
+                'Спасибо за вашу дружбу и любовь.',
+                'Этот день был бы неполным без вас.',
+                'Вы делаете наш праздник особенным!',
+                'Мы любим вас, спасибо что вы есть.',
+                'Надеемся, вам весело!',
+                'Этот день создан для веселья, и вы - его часть!',
+                'Спасибо, что помогаете нам праздновать.',
+                'Мы запомним этот день навсегда.',
+                'Спасибо за смех и добрые слова.',
+                'Мы так благодарны, что вы здесь!',
+                'Этот день - волшебство, и вы - его часть.',
+                'Спасибо, что вы с нами в начале нашего нового пути!'
+            ];
+
 
             // --- Состояние приложения ---
             let photosTaken = parseInt(localStorage.getItem('weddingPhotosTakenCount') || '0');
@@ -126,18 +251,47 @@
             function init() {
                 // Проверяем базовую поддержку API
                 if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                    displayError("К сожалению, ваш браузер не поддерживает функцию камеры.");
+                    messageBoxText.textContent = "К сожалению, ваш браузер не поддерживает функцию камеры.";
+                    messageBox.classList.remove('hidden');
                     startCameraBtn.disabled = true;
                     return;
                 }
                 // Камера требует безопасного соединения (HTTPS)
                 if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
-                    displayError("Для доступа к камере сайт должен быть открыт по защищенному протоколу (https://). Пожалуйста, проверьте адрес сайта.");
+                    messageBoxText.textContent = "Для доступа к камере сайт должен быть открыт по защищенному протоколу (https://). Пожалуйста, проверьте адрес сайта.";
+                    messageBox.classList.remove('hidden');
                     startCameraBtn.disabled = true;
                     startCameraBtn.style.backgroundColor = '#ccc';
                     return;
                 }
 
+                // Обработчики для ввода имени
+                submitNameBtn.addEventListener('click', () => {
+                    const name = userNameInput.value.trim();
+                    if (name.length > 0) {
+                        userName = name;
+                        nameInputModal.classList.add('hidden');
+                        welcomeScreen.classList.remove('hidden');
+                        initAppFlow();
+                    } else {
+                        nameErrorMessage.textContent = 'Пожалуйста, введите ваше имя.';
+                        nameErrorMessage.classList.remove('hidden');
+                    }
+                });
+
+                // Обработчик для закрытия кастомного модального окна
+                messageBoxCloseBtn.addEventListener('click', () => {
+                    messageBox.classList.add('hidden');
+                });
+                
+                // Обработчик для закрытия просмотра фото
+                closePhotoViewerBtn.addEventListener('click', () => {
+                    photoViewerModal.classList.add('hidden');
+                });
+            }
+
+            // Основной поток приложения после ввода имени
+            function initAppFlow() {
                 updatePhotoCounter();
                 startCameraBtn.addEventListener('click', startCamera);
                 takePhotoBtn.addEventListener('click', takePhoto);
@@ -147,7 +301,8 @@
 
             // Запуск и настройка камеры
             async function startCamera() {
-                errorMessage.classList.add('hidden'); // Скрываем старые ошибки
+                // Скрываем старые ошибки, если они есть
+                messageBox.classList.add('hidden'); 
                 if (currentStream) {
                     currentStream.getTracks().forEach(track => track.stop());
                 }
@@ -201,10 +356,10 @@
                 displayError(message);
             }
 
-            // Отображение сообщения об ошибке на главном экране
+            // Отображение сообщения об ошибке на главном экране с помощью кастомного модального окна
             function displayError(message) {
-                errorMessage.textContent = message;
-                errorMessage.classList.remove('hidden');
+                messageBoxText.textContent = message;
+                messageBox.classList.remove('hidden');
                 welcomeScreen.classList.remove('hidden');
                 cameraScreen.classList.add('hidden');
             }
@@ -235,23 +390,58 @@
             // Функция "Сделать фото"
             function takePhoto() {
                 if (photosTaken >= PHOTO_LIMIT) {
-                    // Используем кастомное сообщение вместо alert
-                    displayError('Вы достигли лимита в 25 фотографий!');
-                    setTimeout(() => errorMessage.classList.add('hidden'), 3000);
+                    messageBoxText.textContent = 'Вы достигли лимита в 25 фотографий!';
+                    messageBox.classList.remove('hidden');
                     return;
                 }
 
                 canvas.width = videoElement.videoWidth;
                 canvas.height = videoElement.videoHeight;
                 context.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+
+                // Добавление водяного знака
+                const watermarkText = `${userName} Илья Алина 28.08.2025`;
+                context.font = '30px Inter, sans-serif'; // Размер и шрифт
+                context.fillStyle = 'white';
+                context.globalAlpha = 0.5; // Полупрозрачность
+                context.textAlign = 'right';
+                context.textBaseline = 'bottom';
+                context.fillText(watermarkText, canvas.width - 20, canvas.height - 20);
+                context.globalAlpha = 1.0; // Сброс прозрачности
+
                 const imageDataUrl = canvas.toDataURL('image/jpeg', 0.9);
 
                 displayPhotoInGallery(imageDataUrl);
                 savePhotoToStorage(imageDataUrl);
+
+                // Показываем уведомление
+                showNotification(messages[photosTaken]);
                 
                 photosTaken++;
                 localStorage.setItem('weddingPhotosTakenCount', photosTaken);
                 updatePhotoCounter();
+            }
+
+            // Функция для показа уведомления
+            function showNotification(message) {
+                notificationMessageEl.textContent = message;
+                notificationPopup.classList.add('show');
+                playSound(); // Воспроизводим звук
+                setTimeout(() => {
+                    notificationPopup.classList.remove('show');
+                }, 4000); // Скрываем через 4 секунды
+            }
+
+            // Функция для воспроизведения звука
+            function playSound() {
+                try {
+                    notificationSound.currentTime = 0; // Сбрасываем, чтобы можно было проиграть несколько раз
+                    notificationSound.play().catch(e => {
+                        console.warn("Не удалось воспроизвести звук. Возможно, из-за ограничений браузера на автовоспроизведение.", e);
+                    });
+                } catch(e) {
+                    console.error("Ошибка при воспроизведении звука: ", e);
+                }
             }
 
             // Обновление счетчика на экране
@@ -269,7 +459,11 @@
             function displayPhotoInGallery(imageDataUrl) {
                 const img = document.createElement('img');
                 img.src = imageDataUrl;
-                img.className = 'w-16 h-16 object-cover rounded-md border-2 border-white shadow-md fade-in';
+                img.className = 'w-16 h-16 object-cover rounded-md border-2 border-white shadow-md fade-in cursor-pointer';
+                img.addEventListener('click', () => {
+                    fullSizePhoto.src = imageDataUrl;
+                    photoViewerModal.classList.remove('hidden');
+                });
                 galleryContainer.appendChild(img);
             }
 
@@ -278,9 +472,6 @@
                 const photos = JSON.parse(localStorage.getItem('weddingPhotos') || '[]');
                 photos.push(imageDataUrl);
                 localStorage.setItem('weddingPhotos', JSON.stringify(photos));
-
-                // --- ВАЖНО ДЛЯ РАЗРАБОТЧИКА ---
-                // Здесь можно добавить код для загрузки фото на сервер.
             }
 
             // Загрузка сохраненных фото при открытии страницы
