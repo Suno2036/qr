@@ -189,8 +189,17 @@
 
     <!-- Кастомное всплывающее окно для сообщений -->
     <div id="message-box" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
-        <div class="modal-content bg-white p-6 rounded-xl shadow-2xl text-center max-w-sm w-full">
+        <div id="message-box-content" class="modal-content bg-white p-6 rounded-xl shadow-2xl text-center max-w-sm w-full">
             <p id="message-box-text" class="text-lg font-semibold text-gray-800"></p>
+            <div id="share-buttons-container" class="mt-4 space-y-2 hidden">
+                 <p class="text-sm text-gray-600 mb-4">Теперь, пожалуйста, отправьте архив с фото молодоженам!</p>
+                <a id="share-telegram" href="#" target="_blank" class="block w-full bg-blue-500 text-white font-bold py-3 px-8 rounded-full shadow-lg hover:bg-blue-600 transition-all">
+                    Отправить в Telegram
+                </a>
+                <a id="share-whatsapp" href="#" target="_blank" class="block w-full bg-green-500 text-white font-bold py-3 px-8 rounded-full shadow-lg hover:bg-green-600 transition-all">
+                    Отправить в WhatsApp
+                </a>
+            </div>
             <button id="message-box-close" class="mt-4 px-6 py-2 bg-rose-500 text-white rounded-full hover:bg-rose-600 transition-colors">OK</button>
         </div>
     </div>
@@ -238,6 +247,9 @@
             const messageBox = document.getElementById('message-box');
             const messageBoxText = document.getElementById('message-box-text');
             const messageBoxCloseBtn = document.getElementById('message-box-close');
+            const shareButtonsContainer = document.getElementById('share-buttons-container');
+            const shareTelegramBtn = document.getElementById('share-telegram');
+            const shareWhatsappBtn = document.getElementById('share-whatsapp');
             
             const notificationPopup = document.getElementById('notification-popup');
             const notificationMessageEl = document.getElementById('notification-message');
@@ -303,15 +315,13 @@
             function init() {
                 // Проверяем базовую поддержку API
                 if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                    messageBoxText.textContent = "К сожалению, ваш браузер не поддерживает функцию камеры.";
-                    messageBox.classList.remove('hidden');
+                    showMessage("К сожалению, ваш браузер не поддерживает функцию камеры.");
                     startCameraBtn.disabled = true;
                     return;
                 }
                 // Камера требует безопасного соединения (HTTPS)
                 if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
-                    messageBoxText.textContent = "Для доступа к камере сайт должен быть открыт по защищенному протоколу (https://). Пожалуйста, проверьте адрес сайта.";
-                    messageBox.classList.remove('hidden');
+                    showMessage("Для доступа к камере сайт должен быть открыт по защищенному протоколу (https://). Пожалуйста, проверьте адрес сайта.");
                     startCameraBtn.disabled = true;
                     startCameraBtn.style.backgroundColor = '#ccc';
                     return;
@@ -334,6 +344,9 @@
                 // Обработчик для закрытия кастомного модального окна
                 messageBoxCloseBtn.addEventListener('click', () => {
                     messageBox.classList.add('hidden');
+                    // Скрываем кнопки поделиться, когда окно закрывается
+                    shareButtonsContainer.classList.add('hidden');
+                    messageBoxText.classList.remove('hidden');
                 });
                 
                 // Обработчик для закрытия просмотра фото
@@ -343,6 +356,24 @@
 
                 // Обработчик для кнопки "Скачать все"
                 downloadAllBtn.addEventListener('click', downloadAllPhotos);
+            }
+            
+            // Функция для отображения сообщений в модальном окне
+            function showMessage(text, showShareButtons = false) {
+                messageBoxText.textContent = text;
+                if (showShareButtons) {
+                    // Настраиваем ссылки для шеринга
+                    const shareText = encodeURIComponent(`Привет! Это фотографии со свадьбы Ильи и Алины от гостя по имени ${userName}. #ИльяАлина2025`);
+                    shareTelegramBtn.href = `tg://msg_url?url=&text=${shareText}`;
+                    shareWhatsappBtn.href = `https://api.whatsapp.com/send?text=${shareText}`;
+                    
+                    messageBoxText.classList.add('hidden'); // Скрываем основной текст
+                    shareButtonsContainer.classList.remove('hidden');
+                } else {
+                    messageBoxText.classList.remove('hidden');
+                    shareButtonsContainer.classList.add('hidden');
+                }
+                messageBox.classList.remove('hidden');
             }
 
             // Основной поток приложения после ввода имени
@@ -391,13 +422,11 @@
             // Вспомогательная функция для получения потока с камеры
             function getCameraStream(facingMode) {
                 // Измененные ограничения для повышения производительности
-                // Используем более низкое "идеальное" разрешение для плавности видеопотока,
-                // особенно при зуме. Это поможет избежать "лагов" на большинстве устройств.
                 const constraints = {
                     video: {
                         facingMode: { exact: facingMode },
-                        width: { ideal: 1280 }, // Более низкое разрешение для лучшей производительности
-                        height: { ideal: 720 }  // При этом качество итоговых фото останется высоким
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
                     },
                     audio: false
                 };
@@ -415,10 +444,9 @@
                 displayError(message);
             }
 
-            // Отображение сообщения об ошибке на главном экране с помощью кастомного модального окна
+            // Отображение сообщения об ошибке на главном экране
             function displayError(message) {
-                messageBoxText.textContent = message;
-                messageBox.classList.remove('hidden');
+                showMessage(message);
                 welcomeScreen.classList.remove('hidden');
                 cameraScreen.classList.add('hidden');
             }
@@ -467,7 +495,6 @@
                         applyZoom(parseFloat(e.target.value));
                     });
 
-                    // Обработчики для pinch-to-zoom на мобильных
                     videoElement.addEventListener('touchstart', handleTouchStart, false);
                     videoElement.addEventListener('touchmove', handleTouchMove, false);
                 } else {
@@ -483,7 +510,7 @@
                     const videoTrack = currentStream.getVideoTracks()[0];
                     videoTrack.applyConstraints({ advanced: [{ zoom: currentZoom }] })
                         .catch(e => console.error("Не удалось применить зум", e));
-                    zoomSlider.value = currentZoom; // Обновляем ползунок, если зум меняется от жеста
+                    zoomSlider.value = currentZoom;
                 }
             }
 
@@ -518,8 +545,7 @@
             // Функция "Сделать фото"
             function takePhoto() {
                 if (photosTaken >= PHOTO_LIMIT) {
-                    messageBoxText.textContent = 'Вы достигли лимита в 25 фотографий!';
-                    messageBox.classList.remove('hidden');
+                    showMessage('Вы достигли лимита в 25 фотографий!');
                     return;
                 }
 
@@ -528,22 +554,19 @@
                 context.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
 
                 // Добавление водяного знака
-                const watermarkText = `${userName} Илья Алина 28.08.2025`;
-                context.font = '30px Inter, sans-serif'; // Размер и шрифт
-                context.fillStyle = 'white';
-                context.globalAlpha = 0.5; // Полупрозрачность
+                const watermarkText = `${userName} | Илья & Алина 28.08.2025`;
+                context.font = '30px Inter, sans-serif';
+                context.fillStyle = 'rgba(255, 255, 255, 0.7)';
                 context.textAlign = 'right';
                 context.textBaseline = 'bottom';
                 context.fillText(watermarkText, canvas.width - 20, canvas.height - 20);
-                context.globalAlpha = 1.0; // Сброс прозрачности
 
                 const imageDataUrl = canvas.toDataURL('image/jpeg', 0.9);
 
                 displayPhotoInGallery(imageDataUrl);
                 savePhotoToStorage(imageDataUrl);
 
-                // Показываем уведомление
-                showNotification(messages[photosTaken]);
+                showNotification(messages[photosTaken % messages.length]);
                 
                 photosTaken++;
                 localStorage.setItem('weddingPhotosTakenCount', photosTaken);
@@ -554,18 +577,18 @@
             function showNotification(message) {
                 notificationMessageEl.textContent = message;
                 notificationPopup.classList.add('show');
-                playSound(); // Воспроизводим звук
+                playSound();
                 setTimeout(() => {
                     notificationPopup.classList.remove('show');
-                }, 4000); // Скрываем через 4 секунды
+                }, 4000);
             }
 
             // Функция для воспроизведения звука
             function playSound() {
                 try {
-                    notificationSound.currentTime = 0; // Сбрасываем, чтобы можно было проиграть несколько раз
+                    notificationSound.currentTime = 0;
                     notificationSound.play().catch(e => {
-                        console.warn("Не удалось воспроизвести звук. Возможно, из-за ограничений браузера на автовоспроизведение.", e);
+                        console.warn("Не удалось воспроизвести звук.", e);
                     });
                 } catch(e) {
                     console.error("Ошибка при воспроизведении звука: ", e);
@@ -578,7 +601,7 @@
                 photoCounterEl.textContent = remaining;
                 if (remaining <= 0) {
                     takePhotoBtn.disabled = true;
-                    takePhotoBtn.style.backgroundColor = '#ccc';
+                    takePhotoBtn.style.opacity = '0.5';
                     takePhotoBtn.style.cursor = 'not-allowed';
                 }
             }
@@ -616,14 +639,11 @@
             async function downloadAllPhotos() {
                 const photos = JSON.parse(localStorage.getItem('weddingPhotos') || '[]');
                 if (photos.length === 0) {
-                    messageBoxText.textContent = "Нет фотографий для скачивания.";
-                    messageBox.classList.remove('hidden');
+                    showMessage("Нет фотографий для скачивания.");
                     return;
                 }
 
-                // Показываем сообщение о подготовке
-                messageBoxText.textContent = "Подготовка фотографий к скачиванию...";
-                messageBox.classList.remove('hidden');
+                showMessage("Подготовка фотографий к скачиванию...");
                 downloadAllBtn.disabled = true;
 
                 try {
@@ -632,22 +652,22 @@
                     for (let i = 0; i < photos.length; i++) {
                         const imageDataUrl = photos[i];
                         const base64Data = imageDataUrl.split(',')[1];
-                        zip.file(`photo_${i + 1}.jpeg`, base64Data, { base64: true });
+                        zip.file(`${userName}_photo_${i + 1}.jpeg`, base64Data, { base64: true });
                     }
 
                     const content = await zip.generateAsync({ type: "blob" });
                     const a = document.createElement('a');
                     a.href = URL.createObjectURL(content);
-                    a.download = 'svadebnye_fotografii.zip';
+                    a.download = `Фото от ${userName} (Свадьба Ильи и Алины).zip`;
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
 
-                    // Скрываем сообщение после скачивания
-                    messageBox.classList.add('hidden');
+                    // Показываем сообщение с кнопками "Поделиться"
+                    showMessage("Архив с фото скачан!", true);
+
                 } catch(e) {
-                    messageBoxText.textContent = "Произошла ошибка при создании архива.";
-                    messageBox.classList.remove('hidden');
+                    showMessage("Произошла ошибка при создании архива.");
                     console.error("Ошибка при скачивании архива:", e);
                 } finally {
                     downloadAllBtn.disabled = false;
