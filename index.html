@@ -148,12 +148,10 @@
         
         <!-- Элементы управления камерой -->
         <div class="camera-controls">
-            <!-- Кнопка переключения камеры -->
             <button id="switch-camera-btn" class="absolute left-4 bottom-8 text-white bg-white/30 backdrop-blur-sm p-3 rounded-full hover:bg-white/50 transition hidden">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 19H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5"/><path d="M13 5h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-5"/><path d="m20 12-3-3-3 3"/><path d="m4 12 3 3 3-3"/></svg>
             </button>
 
-            <!-- Кнопка "Сделать фото" с изображением -->
             <button id="take-photo-btn" class="w-20 h-20 rounded-full transition-transform transform active:scale-90 flex items-center justify-center p-2 bg-transparent">
                 <img src="https://raw.githubusercontent.com/Suno2036/qr/main/White%20and%20Black%20Simple%20Initial%20Wedding%20Logo.png" 
                      alt="Сделать фото" 
@@ -161,29 +159,25 @@
                      onerror="this.onerror=null;this.src='https://placehold.co/100x100/ffffff/000000?text=Logo'">
             </button>
             
-            <!-- Счетчик оставшихся фото -->
             <div class="absolute right-4 bottom-9 text-white bg-white/30 backdrop-blur-sm px-3 py-1 rounded-full text-center">
                 <span id="photo-counter" class="font-bold text-lg">25</span>
                 <span class="text-xs block">фото</span>
             </div>
         </div>
         
-        <!-- Ползунок зума -->
         <div id="zoom-controls" class="absolute left-1/2 bottom-20 transform -translate-x-1/2 w-3/4 max-w-sm hidden">
             <input type="range" id="zoom-slider" min="1" max="1" value="1" step="0.1" class="w-full h-2 bg-white/30 rounded-lg appearance-none cursor-pointer backdrop-blur-sm">
         </div>
 
-        <!-- Галерея сделанных фото и кнопка скачать -->
+        <!-- Галерея и кнопка Поделиться/Скачать -->
         <div class="fixed top-4 left-4 flex flex-col items-start gap-2">
-            <div id="gallery-container" class="flex flex-wrap gap-2">
-                <!-- Сюда будут добавляться миниатюры фото -->
-            </div>
-            <button id="download-all-btn" class="mt-2 text-white bg-white/30 backdrop-blur-sm px-4 py-2 rounded-full font-bold text-sm hidden hover:bg-white/50 transition">
-                Скачать все фото
+            <div id="gallery-container" class="flex flex-wrap gap-2"></div>
+            <!-- UPDATED: Кнопка теперь называется "Поделиться" -->
+            <button id="share-or-download-btn" class="mt-2 text-white bg-rose-500 backdrop-blur-sm px-4 py-2 rounded-full font-bold text-sm hidden hover:bg-rose-600 transition shadow-lg">
+                Поделиться фото
             </button>
         </div>
 
-        <!-- Скрытый canvas для захвата изображения -->
         <canvas id="photo-canvas" class="hidden"></canvas>
     </div>
 
@@ -191,20 +185,32 @@
     <div id="message-box" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
         <div id="message-box-content" class="modal-content bg-white p-6 rounded-xl shadow-2xl text-center max-w-sm w-full">
             <p id="message-box-text" class="text-lg font-semibold text-gray-800"></p>
-            <div id="share-buttons-container" class="mt-4 space-y-2 hidden">
-                 <p class="text-sm text-gray-600 mb-4">Теперь, пожалуйста, отправьте архив с фото молодоженам!</p>
-                <a id="share-telegram" href="#" target="_blank" class="block w-full bg-blue-500 text-white font-bold py-3 px-8 rounded-full shadow-lg hover:bg-blue-600 transition-all">
-                    Отправить в Telegram
-                </a>
-                <a id="share-whatsapp" href="#" target="_blank" class="block w-full bg-green-500 text-white font-bold py-3 px-8 rounded-full shadow-lg hover:bg-green-600 transition-all">
-                    Отправить в WhatsApp
-                </a>
+            
+            <!-- Контейнер для инструкций (для браузеров без Web Share API) -->
+            <div id="manual-share-instructions" class="hidden text-left">
+                <h3 class="text-xl font-bold text-gray-800 mb-2 text-center">Готово!</h3>
+                <p class="text-sm text-gray-600 mb-4 border-b pb-3">
+                    <span class="font-bold">Шаг 1:</span> Мы сохранили ZIP-архив с вашими фото в папку 'Загрузки' (Downloads).
+                </p>
+                <p class="text-sm text-gray-600 mb-4">
+                   <span class="font-bold">Шаг 2:</span> Теперь, пожалуйста, отправьте этот файл молодоженам. Нажмите на кнопку ниже, и когда откроется приложение, **прикрепите скачанный ZIP-файл к сообщению!**
+                </p>
+                <div id="share-buttons-container" class="mt-4 space-y-2">
+                    <a id="share-telegram" href="#" target="_blank" class="flex items-center justify-center gap-2 w-full bg-blue-500 text-white font-bold py-3 px-8 rounded-full shadow-lg hover:bg-blue-600 transition-all">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM8.287 5.906c-.778.324-2.334.994-4.666 2.01-.378.15-.577.298-.595.442-.03.243.275.339.69.47l.175.055c.408.133.958.288 1.243.294.26.006.549-.1.868-.32 2.179-1.471 3.304-2.214 3.374-2.23.05-.012.12-.026.166.016.047.041.042.12.037.141-.03.129-1.227 1.241-1.846 1.817-.193.18-.33.307-.358.336a8.154 8.154 0 0 1-.188.186c-.38.366-.664.64.015 1.088.327.216.589.393.85.571.284.194.568.387.936.629.093.06.183.125.27.187.331.226.615.428.927.393.277-.03.542-.235.666-.921.157-.858.278-2.015.283-2.14.007-.184-.01-1.052-.046-1.358-.04-.326-.278-.54-.566-.54-.163 0-.354.09-.524.26z"/></svg>
+                        Открыть Telegram
+                    </a>
+                    <a id="share-whatsapp" href="#" target="_blank" class="flex items-center justify-center gap-2 w-full bg-green-500 text-white font-bold py-3 px-8 rounded-full shadow-lg hover:bg-green-600 transition-all">
+                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M13.601 2.326A7.854 7.854 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.933 7.933 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.898 7.898 0 0 0 13.6 2.326zM7.994 14.521a6.573 6.573 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.557 6.557 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592zm3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.729.729 0 0 0-.529.247c-.182.198-.691.677-.691 1.654 0 .977.71 1.916.81 2.049.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232z"/></svg>
+                        Открыть WhatsApp
+                    </a>
+                </div>
             </div>
+
             <button id="message-box-close" class="mt-4 px-6 py-2 bg-rose-500 text-white rounded-full hover:bg-rose-600 transition-colors">OK</button>
         </div>
     </div>
 
-    <!-- Всплывающее уведомление от молодоженов -->
     <div id="notification-popup" class="w-full max-w-sm bg-white rounded-xl shadow-lg p-3 flex items-center gap-3">
         <img id="notification-image" src="https://raw.githubusercontent.com/Suno2036/qr/main/a19abaa4-3c2f-46c8-9263-af6d4d80be2e.jpeg" 
              class="w-12 h-12 object-cover rounded-full border-2 border-white shadow-sm"
@@ -215,10 +221,8 @@
         </div>
     </div>
 
-    <!-- Аудио элемент для звука уведомления -->
     <audio id="notification-sound" src="https://raw.githubusercontent.com/Suno2036/qr/main/notification-sound-for-messenger-messages.mp3" preload="auto"></audio>
 
-    <!-- Модальное окно для просмотра фотографий -->
     <div id="photo-viewer-modal" class="fixed inset-0 flex items-center justify-center p-4 hidden">
         <button id="close-photo-viewer" class="absolute top-4 right-4 text-white text-4xl">&times;</button>
         <img id="full-size-photo" src="" alt="Full size photo" class="max-w-full max-h-full object-contain">
@@ -247,7 +251,7 @@
             const messageBox = document.getElementById('message-box');
             const messageBoxText = document.getElementById('message-box-text');
             const messageBoxCloseBtn = document.getElementById('message-box-close');
-            const shareButtonsContainer = document.getElementById('share-buttons-container');
+            const manualShareInstructions = document.getElementById('manual-share-instructions'); 
             const shareTelegramBtn = document.getElementById('share-telegram');
             const shareWhatsappBtn = document.getElementById('share-whatsapp');
             
@@ -261,65 +265,31 @@
             
             const zoomControls = document.getElementById('zoom-controls');
             const zoomSlider = document.getElementById('zoom-slider');
-            const downloadAllBtn = document.getElementById('download-all-btn');
+            const shareOrDownloadBtn = document.getElementById('share-or-download-btn');
 
             // --- Настройки ---
             const PHOTO_LIMIT = 25;
             let currentStream;
-            let currentFacingMode = 'environment'; // 'environment' - задняя камера, 'user' - передняя
+            let currentFacingMode = 'environment';
             let userName = '';
-            
             let supportsZoom = false;
             let currentZoom = 1.0;
             let minZoom = 1.0;
             let maxZoom = 1.0;
-
             let initialPinchDistance = null;
 
-            // Сообщения для всплывающего уведомления
             const messages = [
-                'Спасибо, что разделили с нами этот счастливый день!',
-                'Вы самый желанный гость! Рады видеть вас!',
-                'Мы очень ценим ваше присутствие.',
-                'Ваша улыбка делает наш день ярче!',
-                'Спасибо за все, что вы для нас значите.',
-                'Каждый момент сегодня бесценен, спасибо вам!',
-                'Мы очень рады, что вы здесь.',
-                'Это лучший день в нашей жизни, благодаря вам!',
-                'Спасибо за тепло и радость, которую вы принесли.',
-                'Ваш приход - это самый лучший подарок.',
-                'Мы так счастливы, что вы с нами.',
-                'Пусть этот день останется в памяти навсегда.',
-                'Ваше присутствие - это счастье!',
-                'Спасибо за вашу дружбу и любовь.',
-                'Этот день был бы неполным без вас.',
-                'Вы делаете наш праздник особенным!',
-                'Мы любим вас, спасибо что вы есть.',
-                'Надеемся, вам весело!',
-                'Этот день создан для веселья, и вы - его часть!',
-                'Спасибо, что помогаете нам праздновать.',
-                'Мы запомним этот день навсегда.',
-                'Спасибо за смех и добрые слова.',
-                'Мы так благодарны, что вы здесь!',
-                'Этот день - волшебство, и вы - его часть.',
-                'Спасибо, что вы с нами в начале нашего нового пути!'
+                'Спасибо, что разделили с нами этот счастливый день!', 'Вы самый желанный гость! Рады видеть вас!', 'Мы очень ценим ваше присутствие.', 'Ваша улыбка делает наш день ярче!', 'Спасибо за все, что вы для нас значите.', 'Каждый момент сегодня бесценен, спасибо вам!', 'Мы очень рады, что вы здесь.', 'Это лучший день в нашей жизни, благодаря вам!', 'Спасибо за тепло и радость, которую вы принесли.', 'Ваш приход - это самый лучший подарок.', 'Мы так счастливы, что вы с нами.', 'Пусть этот день останется в памяти навсегда.', 'Ваше присутствие - это счастье!', 'Спасибо за вашу дружбу и любовь.', 'Этот день был бы неполным без вас.', 'Вы делаете наш праздник особенным!', 'Мы любим вас, спасибо что вы есть.', 'Надеемся, вам весело!', 'Этот день создан для веселья, и вы - его часть!', 'Спасибо, что помогаете нам праздновать.', 'Мы запомним этот день навсегда.', 'Спасибо за смех и добрые слова.', 'Мы так благодарны, что вы здесь!', 'Этот день - волшебство, и вы - его часть.', 'Спасибо, что вы с нами в начале нашего нового пути!'
             ];
 
-
-            // --- Состояние приложения ---
             let photosTaken = parseInt(localStorage.getItem('weddingPhotosTakenCount') || '0');
 
-            // --- Функции ---
-
-            // Инициализация приложения
             function init() {
-                // Проверяем базовую поддержку API
                 if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
                     showMessage("К сожалению, ваш браузер не поддерживает функцию камеры.");
                     startCameraBtn.disabled = true;
                     return;
                 }
-                // Камера требует безопасного соединения (HTTPS)
                 if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
                     showMessage("Для доступа к камере сайт должен быть открыт по защищенному протоколу (https://). Пожалуйста, проверьте адрес сайта.");
                     startCameraBtn.disabled = true;
@@ -327,7 +297,6 @@
                     return;
                 }
 
-                // Обработчики для ввода имени
                 submitNameBtn.addEventListener('click', () => {
                     const name = userNameInput.value.trim();
                     if (name.length > 0) {
@@ -341,42 +310,34 @@
                     }
                 });
 
-                // Обработчик для закрытия кастомного модального окна
                 messageBoxCloseBtn.addEventListener('click', () => {
                     messageBox.classList.add('hidden');
-                    // Скрываем кнопки поделиться, когда окно закрывается
-                    shareButtonsContainer.classList.add('hidden');
-                    messageBoxText.classList.remove('hidden');
+                    manualShareInstructions.classList.add('hidden');
                 });
                 
-                // Обработчик для закрытия просмотра фото
                 closePhotoViewerBtn.addEventListener('click', () => {
                     photoViewerModal.classList.add('hidden');
                 });
 
-                // Обработчик для кнопки "Скачать все"
-                downloadAllBtn.addEventListener('click', downloadAllPhotos);
+                shareOrDownloadBtn.addEventListener('click', shareOrDownloadPhotos);
             }
             
-            // Функция для отображения сообщений в модальном окне
-            function showMessage(text, showShareButtons = false) {
-                messageBoxText.textContent = text;
-                if (showShareButtons) {
-                    // Настраиваем ссылки для шеринга
+            function showMessage(text, showManualShareFlow = false) {
+                if (showManualShareFlow) {
+                    messageBoxText.classList.add('hidden');
+                    manualShareInstructions.classList.remove('hidden');
+                    
                     const shareText = encodeURIComponent(`Привет! Это фотографии со свадьбы Ильи и Алины от гостя по имени ${userName}. #ИльяАлина2025`);
                     shareTelegramBtn.href = `tg://msg_url?url=&text=${shareText}`;
                     shareWhatsappBtn.href = `https://api.whatsapp.com/send?text=${shareText}`;
-                    
-                    messageBoxText.classList.add('hidden'); // Скрываем основной текст
-                    shareButtonsContainer.classList.remove('hidden');
                 } else {
+                    messageBoxText.textContent = text;
                     messageBoxText.classList.remove('hidden');
-                    shareButtonsContainer.classList.add('hidden');
+                    manualShareInstructions.classList.add('hidden');
                 }
                 messageBox.classList.remove('hidden');
             }
 
-            // Основной поток приложения после ввода имени
             function initAppFlow() {
                 updatePhotoCounter();
                 startCameraBtn.addEventListener('click', startCamera);
@@ -385,228 +346,150 @@
                 loadPhotosFromStorage();
             }
 
-            // Запуск и настройка камеры
             async function startCamera() {
-                // Скрываем старые ошибки, если они есть
                 messageBox.classList.add('hidden'); 
                 if (currentStream) {
                     currentStream.getTracks().forEach(track => track.stop());
                 }
-
                 try {
-                    // Пытаемся запустить камеру с текущими настройками
                     currentStream = await getCameraStream(currentFacingMode);
                 } catch (err) {
-                    console.warn(`Не удалось запустить камеру '${currentFacingMode}'. Пробуем другую. Ошибка: ${err.name}`);
                     const fallbackFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
                     try {
-                        // Если не получилось, пробуем запасной вариант
                         currentStream = await getCameraStream(fallbackFacingMode);
-                        currentFacingMode = fallbackFacingMode; // Обновляем режим, если получилось
+                        currentFacingMode = fallbackFacingMode;
                     } catch (fallbackErr) {
-                        console.error(`Не удалось запустить ни одну камеру. Ошибка: ${fallbackErr.name}`);
                         handleCameraError(fallbackErr);
-                        return; // Выходим, если обе попытки провалились
+                        return;
                     }
                 }
-                
-                // Если поток получен, показываем экран камеры
                 videoElement.srcObject = currentStream;
                 welcomeScreen.classList.add('hidden');
                 cameraScreen.classList.remove('hidden');
-                cameraScreen.classList.add('fade-in');
                 checkCameraSwitchAvailability();
                 setupZoomControls();
             }
             
-            // Вспомогательная функция для получения потока с камеры
             function getCameraStream(facingMode) {
-                // Измененные ограничения для повышения производительности
-                const constraints = {
-                    video: {
-                        facingMode: { exact: facingMode },
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 }
-                    },
+                return navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: { exact: facingMode }, width: { ideal: 1280 }, height: { ideal: 720 } },
                     audio: false
-                };
-                return navigator.mediaDevices.getUserMedia(constraints);
+                });
             }
             
-            // Обработка финальных ошибок камеры
             function handleCameraError(err) {
                 let message = "Произошла неизвестная ошибка при доступе к камере.";
                 if (err.name === "NotAllowedError") {
-                    message = "Вы не разрешили доступ к камере. Пожалуйста, обновите страницу и предоставьте разрешение во всплывающем окне.";
+                    message = "Вы не разрешили доступ к камере. Пожалуйста, обновите страницу и предоставьте разрешение.";
                 } else if (err.name === "NotFoundError" || err.name === "OverconstrainedError" || err.name === "NotReadableError") {
-                    message = "Не удалось найти подходящую камеру на вашем устройстве. Убедитесь, что она не используется другим приложением.";
+                    message = "Не удалось найти подходящую камеру на вашем устройстве.";
                 }
-                displayError(message);
-            }
-
-            // Отображение сообщения об ошибке на главном экране
-            function displayError(message) {
                 showMessage(message);
                 welcomeScreen.classList.remove('hidden');
                 cameraScreen.classList.add('hidden');
             }
 
-            // Проверка возможности переключения камеры
             async function checkCameraSwitchAvailability() {
                 try {
                     const devices = await navigator.mediaDevices.enumerateDevices();
                     const videoInputs = devices.filter(device => device.kind === 'videoinput');
-                    if (videoInputs.length > 1) {
-                        switchCameraBtn.classList.remove('hidden');
-                    } else {
-                        switchCameraBtn.classList.add('hidden');
-                    }
+                    switchCameraBtn.classList.toggle('hidden', videoInputs.length <= 1);
                 } catch(e) {
-                    console.error("Не удалось получить список устройств", e);
                     switchCameraBtn.classList.add('hidden');
                 }
             }
 
-            // Переключение между камерами
             function switchCamera() {
                 currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
-                console.log(`Переключение камеры на: ${currentFacingMode}`);
                 startCamera();
             }
 
-            // Настройка управления зумом
             function setupZoomControls() {
                 const videoTrack = currentStream.getVideoTracks()[0];
                 const capabilities = videoTrack.getCapabilities();
-                
-                if (capabilities.zoom) {
-                    supportsZoom = true;
+                supportsZoom = !!capabilities.zoom;
+                if (supportsZoom) {
                     minZoom = capabilities.zoom.min;
                     maxZoom = capabilities.zoom.max;
-                    currentZoom = capabilities.zoom.current;
-
                     zoomSlider.min = minZoom;
                     zoomSlider.max = maxZoom;
                     zoomSlider.step = capabilities.zoom.step || 0.1;
-                    zoomSlider.value = currentZoom;
+                    zoomSlider.value = currentZoom = videoTrack.getSettings().zoom || 1.0;
                     zoomControls.classList.remove('hidden');
-
-                    zoomSlider.addEventListener('input', (e) => {
-                        applyZoom(parseFloat(e.target.value));
-                    });
-
+                    zoomSlider.addEventListener('input', (e) => applyZoom(parseFloat(e.target.value)));
                     videoElement.addEventListener('touchstart', handleTouchStart, false);
                     videoElement.addEventListener('touchmove', handleTouchMove, false);
                 } else {
-                    supportsZoom = false;
                     zoomControls.classList.add('hidden');
                 }
             }
 
-            // Функция для применения зума
             function applyZoom(zoomValue) {
                 if (supportsZoom) {
-                    currentZoom = Math.max(minZoom, Math.min(maxZoom, zoomValue));
                     const videoTrack = currentStream.getVideoTracks()[0];
-                    videoTrack.applyConstraints({ advanced: [{ zoom: currentZoom }] })
-                        .catch(e => console.error("Не удалось применить зум", e));
+                    currentZoom = Math.max(minZoom, Math.min(maxZoom, zoomValue));
+                    videoTrack.applyConstraints({ advanced: [{ zoom: currentZoom }] });
                     zoomSlider.value = currentZoom;
                 }
             }
 
-            // Обработчик начала касания для pinch-to-zoom
             function handleTouchStart(event) {
-                if (event.touches.length === 2) {
-                    initialPinchDistance = getPinchDistance(event.touches);
-                } else {
-                    initialPinchDistance = null;
-                }
+                if (event.touches.length === 2) initialPinchDistance = getPinchDistance(event.touches);
             }
 
-            // Обработчик движения пальцев для pinch-to-zoom
             function handleTouchMove(event) {
-                if (event.touches.length === 2 && initialPinchDistance !== null) {
+                if (event.touches.length === 2 && initialPinchDistance) {
                     const newPinchDistance = getPinchDistance(event.touches);
-                    const zoomChange = newPinchDistance / initialPinchDistance;
-                    const newZoom = currentZoom * zoomChange;
-                    
-                    applyZoom(newZoom);
+                    applyZoom(currentZoom * (newPinchDistance / initialPinchDistance));
                     initialPinchDistance = newPinchDistance;
                 }
             }
 
-            // Вспомогательная функция для расчета расстояния между пальцами
             function getPinchDistance(touches) {
                 const dx = touches[0].clientX - touches[1].clientX;
                 const dy = touches[0].clientY - touches[1].clientY;
                 return Math.sqrt(dx * dx + dy * dy);
             }
 
-            // Функция "Сделать фото"
             function takePhoto() {
                 if (photosTaken >= PHOTO_LIMIT) {
                     showMessage('Вы достигли лимита в 25 фотографий!');
                     return;
                 }
-
                 canvas.width = videoElement.videoWidth;
                 canvas.height = videoElement.videoHeight;
                 context.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
-
-                // Добавление водяного знака
                 const watermarkText = `${userName} | Илья & Алина 28.08.2025`;
                 context.font = '30px Inter, sans-serif';
                 context.fillStyle = 'rgba(255, 255, 255, 0.7)';
                 context.textAlign = 'right';
                 context.textBaseline = 'bottom';
                 context.fillText(watermarkText, canvas.width - 20, canvas.height - 20);
-
                 const imageDataUrl = canvas.toDataURL('image/jpeg', 0.9);
-
                 displayPhotoInGallery(imageDataUrl);
                 savePhotoToStorage(imageDataUrl);
-
                 showNotification(messages[photosTaken % messages.length]);
-                
                 photosTaken++;
                 localStorage.setItem('weddingPhotosTakenCount', photosTaken);
                 updatePhotoCounter();
             }
 
-            // Функция для показа уведомления
             function showNotification(message) {
                 notificationMessageEl.textContent = message;
                 notificationPopup.classList.add('show');
-                playSound();
-                setTimeout(() => {
-                    notificationPopup.classList.remove('show');
-                }, 4000);
+                notificationSound.play().catch(()=>{});
+                setTimeout(() => notificationPopup.classList.remove('show'), 4000);
             }
 
-            // Функция для воспроизведения звука
-            function playSound() {
-                try {
-                    notificationSound.currentTime = 0;
-                    notificationSound.play().catch(e => {
-                        console.warn("Не удалось воспроизвести звук.", e);
-                    });
-                } catch(e) {
-                    console.error("Ошибка при воспроизведении звука: ", e);
-                }
-            }
-
-            // Обновление счетчика на экране
             function updatePhotoCounter() {
                 const remaining = PHOTO_LIMIT - photosTaken;
                 photoCounterEl.textContent = remaining;
                 if (remaining <= 0) {
                     takePhotoBtn.disabled = true;
                     takePhotoBtn.style.opacity = '0.5';
-                    takePhotoBtn.style.cursor = 'not-allowed';
                 }
             }
             
-            // Отображение миниатюры в галерее
             function displayPhotoInGallery(imageDataUrl) {
                 const img = document.createElement('img');
                 img.src = imageDataUrl;
@@ -616,65 +499,80 @@
                     photoViewerModal.classList.remove('hidden');
                 });
                 galleryContainer.appendChild(img);
-                downloadAllBtn.classList.remove('hidden');
+                shareOrDownloadBtn.classList.remove('hidden');
             }
 
-            // Сохранение фото в localStorage
             function savePhotoToStorage(imageDataUrl) {
                 const photos = JSON.parse(localStorage.getItem('weddingPhotos') || '[]');
                 photos.push(imageDataUrl);
                 localStorage.setItem('weddingPhotos', JSON.stringify(photos));
             }
 
-            // Загрузка сохраненных фото при открытии страницы
             function loadPhotosFromStorage() {
                 const photos = JSON.parse(localStorage.getItem('weddingPhotos') || '[]');
                 photos.forEach(displayPhotoInGallery);
                 if (photos.length > 0) {
-                    downloadAllBtn.classList.remove('hidden');
+                    shareOrDownloadBtn.classList.remove('hidden');
                 }
             }
 
-            // Функция для скачивания всех фото разом
-            async function downloadAllPhotos() {
+            // *** NEW LOGIC HERE ***
+            async function shareOrDownloadPhotos() {
                 const photos = JSON.parse(localStorage.getItem('weddingPhotos') || '[]');
                 if (photos.length === 0) {
-                    showMessage("Нет фотографий для скачивания.");
+                    showMessage("Сначала сделайте хотя бы одно фото.");
                     return;
                 }
 
-                showMessage("Подготовка фотографий к скачиванию...");
-                downloadAllBtn.disabled = true;
+                showMessage("Готовим ваши фото...");
+                shareOrDownloadBtn.disabled = true;
 
                 try {
                     const zip = new JSZip();
-                    
                     for (let i = 0; i < photos.length; i++) {
-                        const imageDataUrl = photos[i];
-                        const base64Data = imageDataUrl.split(',')[1];
+                        const base64Data = photos[i].split(',')[1];
                         zip.file(`${userName}_photo_${i + 1}.jpeg`, base64Data, { base64: true });
                     }
-
+                    const blob = await zip.generateAsync({ type: "blob" });
+                    const fileName = `Фото от ${userName} (Свадьба Ильи и Алины).zip`;
+                    const file = new File([blob], fileName, { type: 'application/zip' });
+                    
+                    // Проверяем, поддерживается ли Web Share API
+                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                        // Используем Web Share API
+                        await navigator.share({
+                            files: [file],
+                            title: 'Фото со свадьбы',
+                            text: `Фотографии от гостя (${userName}) со свадьбы Ильи и Алины!`,
+                        });
+                        messageBox.classList.add('hidden'); // Закрываем сообщение о подготовке
+                    } else {
+                        // Возвращаемся к старому методу, если Web Share API не поддерживается
+                        throw new Error('Web Share API not supported');
+                    }
+                } catch (error) {
+                    // Этот блок сработает, если Web Share API не поддерживается ИЛИ если пользователь закрыл меню "Поделиться"
+                    console.log('Web Share API failed, falling back to download.', error);
+                    // Скачиваем файл и показываем инструкцию
+                    const photos = JSON.parse(localStorage.getItem('weddingPhotos') || '[]');
+                    const zip = new JSZip();
+                     for (let i = 0; i < photos.length; i++) {
+                        const base64Data = photos[i].split(',')[1];
+                        zip.file(`${userName}_photo_${i + 1}.jpeg`, base64Data, { base64: true });
+                    }
                     const content = await zip.generateAsync({ type: "blob" });
                     const a = document.createElement('a');
                     a.href = URL.createObjectURL(content);
                     a.download = `Фото от ${userName} (Свадьба Ильи и Алины).zip`;
-                    document.body.appendChild(a);
                     a.click();
-                    document.body.removeChild(a);
-
-                    // Показываем сообщение с кнопками "Поделиться"
-                    showMessage("Архив с фото скачан!", true);
-
-                } catch(e) {
-                    showMessage("Произошла ошибка при создании архива.");
-                    console.error("Ошибка при скачивании архива:", e);
+                    URL.revokeObjectURL(a.href);
+                    
+                    showMessage("", true); // Показываем модальное окно с ручной инструкцией
                 } finally {
-                    downloadAllBtn.disabled = false;
+                    shareOrDownloadBtn.disabled = false;
                 }
             }
 
-            // Запускаем приложение
             init();
         });
     </script>
